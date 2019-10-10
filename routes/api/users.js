@@ -8,6 +8,9 @@ const passport = require("passport");
 const secretOrKey = require("../../config/jwtconfig").secretOrKey;
 const expires = require("../../config/jwtconfig").expires;
 
+//importing register validation
+const validateRegisterInput = require("../../validation/register");
+const validateLoginInput = require("../../validation/login");
 //@route    GET /api/users/test
 //@desc     test route
 //@access   Public
@@ -19,9 +22,17 @@ route.get("/test", (req, res) => {
 //@desc     Register a user
 //@access   Public
 route.post("/register", (req, res) => {
+  const { errors, isValid } = validateRegisterInput(req.body);
+
+  //check basic validation
+  if (!isValid) {
+    return res.status(400).json(errors);
+  }
+
   User.findOne({ email: req.body.email }).then(user => {
     if (user) {
-      res.status(400).json({ email: "Email already exists" });
+      errors.email = "Email already exists";
+      res.status(400).json(errors);
     } else {
       const avatar = gravatar.url(req.body.email, {
         s: "200", //size
@@ -62,13 +73,18 @@ route.post("/login", (req, res) => {
   const email = req.body.email;
   const password = req.body.password;
 
+  const { errors, isValid } = validateLoginInput(req.body);
+  //check for validation
+  if (!isValid) {
+    return res.status(400).json(errors);
+  }
+
   User.findOne({ email: email }).then(user => {
     if (user) {
       //compare the hashed password
       bcrypt.compare(password, user.password).then(isMatch => {
         if (isMatch) {
           //jwt token generation
-
           //payload
           const payload = { id: user.id, name: user.name, avatar: user.avatar };
 
@@ -86,11 +102,13 @@ route.post("/login", (req, res) => {
             }
           );
         } else {
-          return res.status(400).json({ password: "password incorrect" });
+          errors.password = "Password Incorrect";
+          return res.status(400).json(errors);
         }
       });
     } else {
-      return res.status(400).json({ email: "Email not found" });
+      errors.email = "Email not found";
+      return res.status(400).json(errors);
     }
   });
 });
