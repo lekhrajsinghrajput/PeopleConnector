@@ -4,8 +4,9 @@ const gravatar = require("gravatar");
 const User = require("../../model/Users");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken"); //to generate jsonwebtokens
-const secretOrKey = require("../../config/passportKey").secretOrKey;
-const expires = require("../../config/passportKey").expires;
+const passport = require("passport");
+const secretOrKey = require("../../config/jwtconfig").secretOrKey;
+const expires = require("../../config/jwtconfig").expires;
 
 //@route    GET /api/users/test
 //@desc     test route
@@ -42,7 +43,7 @@ route.post("/register", (req, res) => {
           newUser
             .save()
             .then(user => {
-              res.json(user);
+              return res.json(user);
             })
             .catch(err => {
               console.log(err);
@@ -93,5 +94,20 @@ route.post("/login", (req, res) => {
     }
   });
 });
+
+//@route    POST /api/users/current
+//@desc     Returning a current user
+//@access   Private
+route.post(
+  "/current",
+  passport.authenticate("jwt", { session: false }),
+  (req, res) => {
+    res.json({
+      id: req.user.id,
+      name: req.user.name,
+      email: req.user.email
+    });
+  }
+);
 
 module.exports = route;
